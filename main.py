@@ -3,15 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import os
-import random
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv('secrets.env')
 openai_api_key = os.getenv('OPENAI_API_KEY')
+
 # App Layout
 st.set_page_config(page_title="Plant Project Dashboard", layout="wide")
-st.title("🌼 Plant Growth Tracking Dashboard")
+st.title("🌼🏫 RBMS HH Growth Project")
 
 # Persistent Data File
 DATA_FILE = "plant_growth_data.csv"
@@ -52,7 +52,7 @@ if st.session_state["user_authenticated"]:
 
     date = st.sidebar.date_input("Date")
     plant_name = st.sidebar.selectbox("Plant Name", ["Plant A", "Plant B", "Plant C", "Plant D"])
-    classroom_numbers = ['2201', '1110', '3309']
+    classroom_numbers = [2210, 2101, 1101, 3309]
     classroom_number = st.sidebar.selectbox("Classroom Number", options=classroom_numbers)
     growth_cm = st.sidebar.number_input("Growth (cm)", min_value=0.0, step=0.1)
 
@@ -94,7 +94,7 @@ with tabs[0]:
             - Monitor and celebrate plant growth as a community effort.
             """
         )
-        with st.expander("### Student Creators"):
+        with st.expander("### HH Student Creators"):
             student = st.segmented_control("Student Creators", options=["George", "Rodriguez", "Chembi"])
             if student == "George":
                 st.image("images/creators/george.jpeg", width=500)
@@ -104,7 +104,7 @@ with tabs[0]:
                 st.image("images/creators/chembi.jpeg", width=500)
 with tabs[1]:
     # Main Page Content
-    st.write("### Welcome to the Plant Growth Tracking Dashboard")
+    st.write("### Plant Growth Tracking")
     st.write("This dashboard visualizes plant growth data and allows for tracking monthly progress.")
     with st.expander("View Plant Growth Data", expanded=False):
         if not growth_data.empty:
@@ -112,13 +112,13 @@ with tabs[1]:
         else:
             st.write("No data available.")
     st.markdown("---", unsafe_allow_html=True)
-    st.write("### Monthly Growth Overview")
+    st.write("## Growth Dashboard")
     if "start_date" not in st.session_state:
         st.session_state["start_date"] = datetime.now().replace(day=1).date()
 
     start_date = st.session_state["start_date"]
     end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-    st.write(f"Tracking Month: {start_date.strftime('%B %Y')}")
+    st.write(f"### Tracking Month: {start_date.strftime('%B %Y')}")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -199,62 +199,54 @@ with tabs[2]:
             st.image(image_result)
 
 with tabs[3]:
-    st.write("### Plant Types")
+    st.subheader("🏗️ Plant Benefits & Maintenance")
+    st.write("On this page, you can design a custom page tailored to your preferred plant type and page style. Give it a try! 😊")
     plant_types = {
         "Lillies": "images/lillies.jpeg",
         "Snake Plants": "images/snake_plant.jpeg",
         "Roses": "images/roses.jpeg"
     }
 
-    selected_plant = st.selectbox("Select Plant Type:", list(plant_types.keys()))
-    img_path = plant_types[selected_plant]
-
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader(selected_plant)
-        st.image(img_path, caption=selected_plant, width=500)
+        selected_plant = st.selectbox("Select Plant Type:", list(plant_types.keys()))
     with col2:
-        client = OpenAI(
-            organization='',
-            project='',
-            api_key=openai_api_key,
-        )
+        page_style = st.selectbox("Page style", ["Informative", "Happy", "Cool, yet mannered", "Respectful"])
+    plant_submit_btn = st.button("Get Plant Info")
+    if plant_submit_btn:
+        with st.spinner("Getting Custom Plant Info..."):
+            img_path = plant_types[selected_plant]
 
-        prompt = {
-            "role": "assistant",
-            "content": f"""
-                1. Act as a plant enthusiast and explain the top 3 benefits in the most concise and simplest way in creative markdown including emoji.
-                2. Paragraph 2 is on Plant Maintenance: Include simple directions on how to care for the following plant in a list format, choose top 5 most important: {selected_plant}.
-                3. Two separate paragraphs, one for plant benefits, the other on plant maintenance and care. No boilerplate introduction, just response in an organized markdown format.
-                """,
-        }
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[prompt]
-        )
-        with st.spinner(f"Retrieving updated data on {plant_types[selected_plant]}..."):
-            response = completion.choices[0].message.content
-            st.markdown(response, unsafe_allow_html=True)
+            st.markdown("---", unsafe_allow_html=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader(selected_plant)
+                st.image(img_path, caption=selected_plant, width=500)
+            with col2:
+                client = OpenAI(
+                    organization='',
+                    project='',
+                    api_key=openai_api_key,
+                )
 
-    with st.expander("Upload Plant Images", expanded=False):
-        st.write(f"#### Track {selected_plant} Growth")
-        growth_date = st.date_input(f"Enter Date for {selected_plant}")
-        room_number = st.text_input(f"Enter Room Number for {selected_plant}")
-        uploaded_file = st.file_uploader(f"Upload an Image of {selected_plant}", type=["jpg", "png"])
-        if uploaded_file is not None:
-            plant_directory = f"images/{selected_plant.replace(' ', '_').lower()}"
-            if not os.path.exists(plant_directory):
-                os.makedirs(plant_directory)
+                prompt = {
+                    "role": "assistant",
+                    "content": f"""
+                        1. Act as a plant enthusiast and explain one unique benefit of the {selected_plant} in concise, a easy to ready, markdown format, including emojis, under Benfits of {selected_plant}.
+                        2. Paragraph 2 is on Plant Maintenance: Include simple, short, monthly maintenance schedule on how to care for the following plant in a list format, choose top 5 most important: {selected_plant}.
+                        3. Customize the page style toward the suggest writing style: {page_style}
+                        4. Two separate paragraphs, one for plant benefits, the other on plant maintenance and care. No boilerplate introduction, just response in an organized markdown format.
+                        5. Use simple words.
+                        """,
+                }
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[prompt]
+                )
+                with st.spinner(f"Retrieving updated data on {plant_types[selected_plant]}..."):
+                    response = completion.choices[0].message.content
+                    st.markdown(response, unsafe_allow_html=True)
 
-            image_count = len(os.listdir(plant_directory)) + 1
-            file_path = f"{plant_directory}/image_{image_count}.{uploaded_file.type.split('/')[-1]}"
-
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-
-            st.success(f"Image for {selected_plant} uploaded successfully to {file_path}!")
-        if st.button(f"Submit {selected_plant} Growth Data"):
-            st.success(f"Growth data for {selected_plant} submitted successfully!")
 with tabs[4]:
     st.subheader("Plant Locations")
 
