@@ -80,45 +80,28 @@ if st.session_state["user_authenticated"]:
 tabs = st.tabs(["About Project","Dashboard","Affirmations", "Types of Plants", "Plant Locations"])
 
 with tabs[0]:
-    st.subheader("About the Helping Hands Plant Project")
-    st.write(
-        "This project is a collaborative effort designed to boost student morale and engagement by bringing nature into the school environment.")
-    st.write("### Objectives:")
-    st.markdown(
-        """
-        - Create a calming, inspiring environment for students.
-        - Teach students about responsibility through plant care.
-        - Monitor and celebrate plant growth as a community effort.
-        """
-    )
-
-    st.write("### Plant Types Brought Into the School")
-    plant_types = {
-        "Lillies": "images/lillies.jpeg",
-        "Snake Plants": "images/snake_plant.jpeg",
-        "Roses": "images/roses.jpeg"
-    }
-
-    plant_tabs = st.tabs(list(plant_types.keys()))
-    for tab, (plant, img_path) in zip(plant_tabs, plant_types.items()):
-        with tab:
-            st.subheader(plant)
-            st.image(img_path, caption=plant, width=500)
-            st.write(f"#### Benefits of {plant}")
-            st.write("- Improves air quality.")
-            st.write("- Creates a calming environment.")
-            st.write("- Enhances aesthetics of the space.")
-            st.write(f"#### Caring for {plant}")
-            st.write("- Water moderately.")
-            st.write("- Keep in indirect sunlight.")
-            st.write("- Ensure proper drainage.")
-
-            st.write(f"#### Track {plant} Growth")
-            growth_date = st.date_input(f"Enter Date for {plant}")
-            room_number = st.text_input(f"Enter Room Number for {plant}")
-            uploaded_file = st.file_uploader(f"Upload an Image of {plant}", type=["jpg", "png"])
-            if st.button(f"Submit {plant} Growth Data"):
-                st.success(f"Growth data for {plant} submitted successfully!")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image("images/welcome.jpeg", width=500)
+        st.caption("Helping Hands | River Bend Middle School | Raleigh, NC")
+    with col2:
+        st.write("### About the Helping Hands Plant Project")
+        st.write("### Objectives:")
+        st.markdown(
+            """
+            - Create a calming, inspiring environment for students.
+            - Teach students about responsibility through plant care.
+            - Monitor and celebrate plant growth as a community effort.
+            """
+        )
+        with st.expander("### Student Creators"):
+            student = st.segmented_control("Student Creators", options=["George", "Rodriguez", "Chembi"])
+            if student == "George":
+                st.image("images/creators/george.jpeg", width=500)
+            if student == "Rodriguez":
+                st.image("images/creators/rodriguez.jpeg", width=500)
+            if student == "Chembi":
+                st.image("images/creators/chembi.jpeg", width=500)
 with tabs[1]:
     # Main Page Content
     st.write("### Welcome to the Plant Growth Tracking Dashboard")
@@ -128,7 +111,7 @@ with tabs[1]:
             st.dataframe(growth_data)
         else:
             st.write("No data available.")
-
+    st.markdown("---", unsafe_allow_html=True)
     st.write("### Monthly Growth Overview")
     if "start_date" not in st.session_state:
         st.session_state["start_date"] = datetime.now().replace(day=1).date()
@@ -216,9 +199,62 @@ with tabs[2]:
             st.image(image_result)
 
 with tabs[3]:
-    st.subheader("Types of Plants")
-    st.write("List the types of plants being monitored in the project.")
+    st.write("### Plant Types")
+    plant_types = {
+        "Lillies": "images/lillies.jpeg",
+        "Snake Plants": "images/snake_plant.jpeg",
+        "Roses": "images/roses.jpeg"
+    }
 
+    selected_plant = st.selectbox("Select Plant Type:", list(plant_types.keys()))
+    img_path = plant_types[selected_plant]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader(selected_plant)
+        st.image(img_path, caption=selected_plant, width=500)
+    with col2:
+        client = OpenAI(
+            organization='',
+            project='',
+            api_key=openai_api_key,
+        )
+
+        prompt = {
+            "role": "assistant",
+            "content": f"""
+                1. Act as a plant enthusiast and explain the top 3 benefits in the most concise and simplest way in creative markdown including emoji.
+                2. Paragraph 2 is on Plant Maintenance: Include simple directions on how to care for the following plant in a list format, choose top 5 most important: {selected_plant}.
+                3. Two separate paragraphs, one for plant benefits, the other on plant maintenance and care. No boilerplate introduction, just response in an organized markdown format.
+                """,
+        }
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[prompt]
+        )
+        with st.spinner(f"Retrieving updated data on {plant_types[selected_plant]}..."):
+            response = completion.choices[0].message.content
+            st.markdown(response, unsafe_allow_html=True)
+
+    with st.expander("Upload Plant Images", expanded=False):
+        st.write(f"#### Track {selected_plant} Growth")
+        growth_date = st.date_input(f"Enter Date for {selected_plant}")
+        room_number = st.text_input(f"Enter Room Number for {selected_plant}")
+        uploaded_file = st.file_uploader(f"Upload an Image of {selected_plant}", type=["jpg", "png"])
+        if uploaded_file is not None:
+            plant_directory = f"images/{selected_plant.replace(' ', '_').lower()}"
+            if not os.path.exists(plant_directory):
+                os.makedirs(plant_directory)
+
+            image_count = len(os.listdir(plant_directory)) + 1
+            file_path = f"{plant_directory}/image_{image_count}.{uploaded_file.type.split('/')[-1]}"
+
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            st.success(f"Image for {selected_plant} uploaded successfully to {file_path}!")
+        if st.button(f"Submit {selected_plant} Growth Data"):
+            st.success(f"Growth data for {selected_plant} submitted successfully!")
 with tabs[4]:
     st.subheader("Plant Locations")
 
@@ -233,13 +269,13 @@ with tabs[4]:
         st.write(f"### Classroom {selected_classroom}")
         st.markdown(
             f"""
-            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; font-size: 20px">
+            <div style="color:red font-size: 20px">
                 <p><strong>Plant Types:</strong> <span>{', '.join(plant_types)}<span></p>
                 <p><strong>Total Growth:</strong> <span>{total_growth:.2f}<span> cm</p>
             </div>
             """,
             unsafe_allow_html=True
         )
-        st.image(f"images/classroom_{selected_classroom}.jpg", caption=f"Classroom {selected_classroom}")
+        st.image(f"images/classroom_{selected_classroom}.jpg", caption=f"Classroom {selected_classroom}", width=500)
     else:
         st.write("No plant data available.")
